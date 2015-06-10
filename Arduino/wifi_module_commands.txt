@@ -1,0 +1,13 @@
+- Both NL & CR
+- Baud 115200
+
+AT
+AT+CWLAP
+AT+CWJAP="wifi_ssid","password"
+AT+CIFSR
+AT+CWMODE=1
+AT+CIPMODE=0
+AT+CIPMUX=1
+AT+CIPSTART=0,"TCP","192.168.0.251",1028
+AT+CIPSEND=0,10
+<Type in something <= 10 chars long... and profit!>
