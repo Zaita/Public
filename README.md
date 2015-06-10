@@ -1,4 +1,4 @@
 SampleCode
 ==========
 
-Sample Code
+A bunch of sample snippets of code I have written in various languages
