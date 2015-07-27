@@ -6,22 +6,22 @@ const int FLOAT_3 = 5; // Float 3 is the reservoir warning switch
 const int PUMP = 6; // 12v DC pump
 const int BUZZER = 7; // audible alarm
 
-const int RED_LED = 8; // error state / not operational indicator
-const int YELLOW_LED = 9; // Unit is on standby
 const int GREEN_LED = 10; // Pump is on
+const int YELLOW_LED = 9; // Unit is on standby
+const int RED_LED = 8; // error state / not operational indicator
 const int LED = 13;
 
 const int DELAY_MS = 100; // delay in ms
-const int PUMP_BOUNCE_MS = 30000; // minimum time between pump being activated to stop burnout
-const int PUMP_MAX_ON_MS = 60000; // maximum time pump can be on
-const int STANDBY_MS = 10000; // how long unit remains in standby
+const unsigned long PUMP_BOUNCE_MS = 10000; // minimum time between pump being activated to stop burnout
+const unsigned long PUMP_MAX_ON_MS = 60000; // maximum time pump can be on
+const unsigned long STANDBY_MS = 5000; // how long unit remains in standby
 
 // different patterns for the buzzer to 
 // indicate what errors occurred
-const int BUZZER_PATTERN[3][6] = { 
-  { 0, 1, 1, 1, 1, 1 }, // Fail safe float has been activated
-  { 0, 0, 1, 1, 0, 0 }, // Reservoir float has been activated
-  { 1, 1, 1, 1, 1, 0 }  // Pump has been on too long alarm
+const int BUZZER_PATTERN[3][8] = { 
+  { 1, 1, 1, 1, 1, 1, 1, 1 }, // Pump has been on too long alarm
+  { 1, 1, 1, 1, 0, 0, 0, 0 }, // Fail safe float has been activated
+  { 0, 0, 1, 1, 0, 0, 1, 1 }  // Reservoir float has been activated
 };
 
 // Different states for the system
@@ -35,9 +35,9 @@ enum State {
 };
 
 State current_state = kStandby;
-int standby_timer = 0;
-int pump_on_timer = 0;
-int pump_off_timer = 0;
+unsigned long standby_timer = 0;
+unsigned long pump_on_timer = 0;
+unsigned long pump_off_timer = PUMP_BOUNCE_MS + 1;
 
 /**
 Setup our initial state
@@ -66,8 +66,8 @@ Sound the alarm
 **/
 void sound_alarm(int alarm_index) {
   static int index = 0;
-  index = (index + 1) % 6;
-  if (BUZZER_PATTERN[alarm_index][index] == '1') {
+  index = (index + 1) % 8;
+  if (BUZZER_PATTERN[alarm_index][index] == 1) {
     digitalWrite(RED_LED, HIGH);
     digitalWrite(LED, HIGH);        
     digitalWrite(BUZZER, HIGH);  
@@ -142,19 +142,37 @@ void loop() {
     digitalWrite(PUMP, LOW);        
     Serial.println("Changing to reservoir alarm state");
   
-  } else if (digitalRead(FLOAT_2) == HIGH) {
+  } else if (digitalRead(FLOAT_2) == LOW) {
     current_state = kFailsafeAlarm; 
     digitalWrite(PUMP, LOW);
     Serial.println("Changing to failsafe alarm state");
     
   } else if (digitalRead(FLOAT_1) == HIGH && current_state != kPumpOn) {
-    current_state = kPumpOn;
-    digitalWrite(PUMP, HIGH);
-    digitalWrite(GREEN_LED, HIGH);
-    pump_on_timer = 0;
-    pump_off_timer = 0;
-    Serial.println("Switching pump on");
-  
+    if (pump_off_timer > PUMP_BOUNCE_MS) {
+      current_state = kPumpOn;
+      digitalWrite(PUMP, HIGH);
+      digitalWrite(GREEN_LED, HIGH);
+      pump_on_timer = 0;
+      pump_off_timer = 0;
+      Serial.println("Switching pump on");
+    } else {
+      Serial.print("Pump still in bounce. Pump off timer: ");
+      Serial.print(pump_off_timer);
+      Serial.print("ms / ");
+      Serial.print(PUMP_BOUNCE_MS);
+      Serial.print("ms\n");
+      pump_off_timer += DELAY_MS;
+    }
+    
+  } else if (digitalRead(FLOAT_1) != HIGH && current_state == kPumpOn) {
+    /**
+    Pump is on, switch it off
+    **/
+    current_state = kOperational;
+    digitalWrite(PUMP, LOW);
+    digitalWrite(GREEN_LED, LOW);    
+    Serial.println("Switching pump off");
+    
   } else if (current_state == kPumpOn) {
     /**
     Ensure the pump has not been running for too long
@@ -165,6 +183,11 @@ void loop() {
     Serial.print(pump_on_timer);
     Serial.print("ms\n");
     if (pump_on_timer > PUMP_MAX_ON_MS) {
+      Serial.print("Pump on timer: ");
+      Serial.print(pump_on_timer);
+      Serial.print("; Pump max on ms: ");
+      Serial.print(PUMP_MAX_ON_MS);
+      Serial.print("\n");
       digitalWrite(PUMP, LOW);
       current_state = kPumpMaxOnAlarm;
     }           
