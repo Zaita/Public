@@ -1,4 +1,14 @@
-SampleCode
+Public
 ==========
 
-A bunch of sample snippets of code I have written in various languages
+This is a repository of different snippets of code and mini-projects.
+
+
+**Arduino**
+Arduino code for a custom auto top-off unit for a fish tank. It uses multiple float values or optical water level sensors to monitor the water level of a tank, then turns on a pump to top the tank up when required. This device is used for maintaining consistent water level in a salt water reef tank to ensure constant salinity.
+
+**MapSortedByInsertion**
+Some simple code for a map that stores the order of insertion. This is used in the Casal2 project to allow us to map different lists of text inputted by the user towards category lists. 
+
+**PlayingWithCode**
+Just playing with some different code and methods in Python.
